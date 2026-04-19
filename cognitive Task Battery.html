@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cognitive Task Battery</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --go:#E67A1F; --stop:#2B6CB0; --ok:#276749;
+  --err:#C53030; --warn:#B7791F; --muted:#4A5568;
+  --border:#CBD5E0; --surface:#F7F9FC; --text:#1A202C;
+}
+body{font-family:Georgia,'Times New Roman',serif;background:#fff;color:var(--text);min-height:100vh;user-select:none;font-size:20px;}
+.screen{display:none;}
+.screen.active{
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+}
+@keyframes fi{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+h1{font-size:2.5rem;font-weight:normal;margin-bottom:.6rem;}
+h2{font-size:2rem;font-weight:normal;margin-bottom:.8rem;}
+p{font-size:1.2rem;color:var(--muted);margin-bottom:.8rem;max-width:640px;line-height:1.65;}
+.divider{width:60px;height:2px;background:var(--border);margin:1.4rem auto;}
+.btn{margin-top:1.5rem;padding:.85rem 2.8rem;background:var(--text);color:#fff;border:none;border-radius:6px;font-family:inherit;font-size:1.15rem;cursor:pointer;transition:opacity .15s;}
+.btn:hover{opacity:.8;}
+.btn.hidden{display:none !important;}
+
+/* Instruction boxes */
+.ibox{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem 2rem;text-align:left;max-width:620px;width:100%;margin:.7rem auto 0;}
+.irow{display:flex;align-items:center;gap:1.2rem;padding:.5rem 0;font-size:1.15rem;}
+.irow+.irow{border-top:1px solid var(--border);}
+.bsm{width:34px;height:34px;border-radius:50%;flex-shrink:0;background:var(--go);}
+.bsm.blue{background:var(--stop);}
+.kbd{display:inline-block;background:#EDF2F7;border:1.5px solid var(--border);border-radius:5px;padding:.05rem .5rem;font-family:monospace;font-size:1rem;}
+.tbadge{display:inline-block;background:var(--surface);border:1px solid var(--border);border-radius:30px;padding:.25rem 1.2rem;font-size:.95rem;color:var(--muted);margin-bottom:.8rem;}
+
+/* Trial screen */
+#s-trial.active{padding:0;position:relative;}
+.th{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:.75rem 1.8rem;border-bottom:1px solid var(--border);background:#fff;font-size:.95rem;color:var(--muted);z-index:100;}
+#trial-content{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;min-height:100vh;}
+
+/* Stimuli */
+.sball{width:140px;height:140px;border-radius:50%;transition:transform .1s;}
+.sball.go{background:var(--go);}
+.sball.nogo{background:var(--stop);}
+.sball.pressed{transform:scale(.86);}
+
+/* SST ring */
+.sw{position:relative;width:160px;height:160px;display:flex;align-items:center;justify-content:center;}
+.sring{position:absolute;inset:0;border-radius:50%;border:14px solid var(--stop);opacity:0;transition:opacity .04s;}
+.sring.on{opacity:1;}
+
+/* CPT letter */
+.clet{font-size:7rem;font-weight:bold;color:var(--text);line-height:1;min-width:1em;text-align:center;transition:opacity .06s;}
+
+/* Fixation */
+.fix{font-size:4.5rem;color:var(--muted);}
+
+/* Feedback */
+.fbt{font-size:2.1rem;font-weight:bold;animation:pi .15s ease;}
+.fbs{font-size:1.1rem;color:var(--muted);margin-top:.3rem;}
+.fb-correct{color:var(--ok);}
+.fb-error{color:var(--err);}
+.fb-warn{color:var(--warn);}
+@keyframes pi{from{opacity:0;transform:scale(.8);}to{opacity:1;transform:scale(1);}}
+
+/* Timers */
+.tring{width:160px;height:160px;border-radius:50%;border:4px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;margin:1.2rem auto;background:var(--surface);}
+.tnum{font-size:3rem;font-weight:bold;line-height:1;}
+.tlbl{font-size:.9rem;color:var(--muted);margin-top:3px;}
+
+/* End screen */
+.end-icon{font-size:4rem;margin-bottom:.4rem;}
+
+/* Host panel */
+#hp{display:none;position:fixed;bottom:1.5rem;right:1.5rem;background:#1A202C;color:#fff;padding:1rem 1.4rem;border-radius:10px;z-index:9999;font-family:Georgia,serif;font-size:.95rem;}
+.hp-t{font-size:.85rem;opacity:.6;margin-bottom:.7rem;letter-spacing:.5px;}
+.hp-dl{background:#48BB78;color:#fff;border:none;border-radius:5px;padding:.4rem 1rem;font-size:.95rem;cursor:pointer;font-family:inherit;}
+.hp-x{background:transparent;color:#aaa;border:1px solid #444;border-radius:5px;padding:.4rem .7rem;font-size:.95rem;cursor:pointer;margin-left:.4rem;font-family:inherit;}
+
+@media(max-width:600px){
+  h1{font-size:1.8rem;} h2{font-size:1.5rem;}
+  .sball{width:110px;height:110px;}
+  .clet{font-size:5rem;}
+  .fbt{font-size:1.6rem;}
+}
+/* ===== SURVEY UI (CORRECT CSS) ===== */
+
+.wrap{
+  max-width:680px;
+  margin:0 auto;
+  padding:0 1.5rem 4rem;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+
+.prog-sticky{
+  position:sticky;
+  top:0;
+  background:#fff;
+  padding:.85rem 0 1rem;
+  z-index:10;
+  border-bottom:1px solid #eee;
+  margin-bottom:2rem;
+}
+
+.prog-label{
+  display:flex;
+  justify-content:space-between;
+  font-size:12px;
+  color:#888;
+  margin-bottom:7px;
+}
+
+.prog-track{
+  height:3px;
+  background:#eee;
+  border-radius:2px;
+}
+
+.prog-fill{
+  height:3px;
+  background:#1a1a1a;
+  border-radius:2px;
+  transition:width .35s;
+}
+
+.q-title{
+  font-size:17px;
+  font-weight:500;
+  line-height:1.55;
+  margin-bottom:1.5rem;
+}
+
+.options{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.opt{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 14px;
+  border:1px solid #e0e0e0;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:14px;
+}
+
+.opt.selected{
+  border-color:#1a1a1a;
+  background:#f5f5f5;
+}
+
+.scale-row{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+}
+
+.scale-btn{
+  flex:1;
+  min-width:52px;
+  padding:9px 4px;
+  border:1px solid #e0e0e0;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:13px;
+  background:#fff;
+}
+
+.scale-btn.sel{
+  border-color:#1a1a1a;
+  background:#1a1a1a;
+  color:#fff;
+}
+
+.scale-labels{
+  display:flex;
+  justify-content:space-between;
+  font-size:11px;
+  color:#999;
+  margin-top:7px;
+}
+
+input[type=text],input[type=number]{
+  width:100%;
+  padding:10px 14px;
+  border:1px solid #e0e0e0;
+  border-radius:8px;
+  font-size:14px;
+}
+
+.nav{
+  display:flex;
+  gap:10px;
+  margin-top:2rem;
+}
+
+.btn-back{
+  border:1px solid #ddd;
+  background:#fff;
+  color:#888;
+  padding:10px 22px;
+  border-radius:8px;
+}
+
+.btn-next{
+  border:1px solid #1a1a1a;
+  background:#1a1a1a;
+  color:#fff;
+  padding:10px 22px;
+  border-radius:8px;
+  margin-left:auto;
+}
+
+.consent-card{
+  background:#fafafa;
+  border:1px solid #e8e8e8;
+  border-radius:10px;
+  padding:1.1rem 1.4rem;
+  margin-bottom:1rem;
+}
+
+.agree-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px 14px;
+  border:1px solid #e0e0e0;
+  border-radius:8px;
+  margin-top:1rem;
+}
+
+.done-wrap{
+  text-align:center;
+  padding:4rem 1rem;
+}
+
+/* ===== SURVEY FONT FIX ===== */
+#s-survey{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+/* ===== SURVEY LAYOUT FIX ===== */
+#s-survey.active{
+  align-items:stretch;
+  justify-content:flex-start;
+  padding:0;
+  text-align:left;
+}
+/* ===== BUTTON RESET FOR SURVEY ===== */
+#s-survey .btn{
+  all: unset;
+}
+
+#s-survey .btn-next{
+  padding:10px 22px;
+  border-radius:8px;
+  border:1px solid #1a1a1a;
+  background:#1a1a1a;
+  color:#fff;
+  cursor:pointer;
+}
+
+#s-survey .btn-back{
+  padding:10px 22px;
+  border-radius:8px;
+  border:1px solid #ddd;
+  background:#fff;
+  color:#888;
+  cursor:pointer;
+}
+/* ===== SURVEY WIDTH ===== */
+
+/* ===== SURVEY LAYOUT FIX ===== */
+/* ===== BUTTON RESET ===== */
+#s-survey .btn{...}
+#s-survey .btn-next{...}
+#s-survey .btn-back{...}
+
+/* ===== WIDTH FIX ===== */
+#s-survey .wrap{...}
+
+</style>
+</head>
+<body>
+<!-- PARTICIPANT ID -->
+<div id="s-pid" class="screen active">
+  <div style="font-size:.9rem;color:#888;margin-bottom:6px;">RESEARCH STUDY</div>
+  <h2>Enter Participant ID</h2>
+  <p>Enter the ID given by the researcher</p>
+
+  <div class="ibox" style="margin-top:1rem;">
+    <div style="font-size:.8rem;color:#777;margin-bottom:5px;">PARTICIPANT ID</div>
+    <input type="text" id="pidInput" placeholder="e.g. P01 or S2024_01">
+  </div>
+  <button class="btn" id="pidBtn" onclick="startSurvey()" disabled>
+    Continue →
+  </button>
+</div>
+<!-- SURVEY -->
+<div id="s-survey" class="screen">
+  <div class="wrap">
+    <div class="prog-sticky">
+      <div class="prog-label">
+        <span id="prog-sec">Informed Consent</span>
+        <span id="prog-ct"></span>
+      </div>
+      <div class="prog-track">
+        <div class="prog-fill" id="prog-fill"></div>
+      </div>
+    </div>
+    <div id="page"></div>
+  </div>
+</div>
+
+<!-- WELCOME -->
+<div id="s-welcome" class="screen">
+  <h1>Cognitive Task Battery</h1>
+  <div class="divider"></div>
+  <p>This session consists of three short computer tasks that measure attention and self-control.</p>
+  <p style="font-size:1.05rem;">Please sit quietly and use a physical keyboard. The session takes approximately 35–40 minutes total.</p>
+  <p style="font-size:1rem;color:#999;">You will be told what to do before each task begins.</p>
+  <button class="btn" onclick="initSession()">Begin &rarr;</button>
+</div>
+
+<!-- TASK INTRO -->
+<div id="s-intro" class="screen">
+  <div class="tbadge" id="tbadge"></div>
+  <h2 id="t-title"></h2>
+  <div class="divider"></div>
+  <div id="t-body"></div>
+  <button class="btn" onclick="startPractice()">Start Practice &rarr;</button>
+</div>
+
+<!-- TRIAL -->
+<div id="s-trial" class="screen">
+  <div class="th">
+    <span id="th-l"></span>
+    <span id="th-m"></span>
+    <span id="th-r"></span>
+  </div>
+  <div id="trial-content"></div>
+</div>
+
+<!-- PRACTICE END -->
+<div id="s-pend" class="screen">
+  <h2>Practice Complete</h2>
+  <div class="divider"></div>
+  <p id="pend-msg"></p>
+  <p style="font-size:1rem;color:#999;">Press the button whenever you feel ready.</p>
+  <button class="btn" onclick="startMain()">Begin Main Task &rarr;</button>
+</div>
+
+<!-- BLOCK BREAK (1 min) -->
+<div id="s-bbreak" class="screen">
+  <h2>Short Break</h2>
+  <div class="divider"></div>
+  <p>Block <span id="bb-done"></span> of <span id="bb-total"></span> complete. Take a moment to rest your eyes.</p>
+  <div class="tring">
+    <div class="tnum" id="bb-n">60</div>
+    <div class="tlbl">seconds</div>
+  </div>
+  <p style="font-size:1rem;color:#999;">The next block starts automatically when the timer ends.</p>
+  <button class="btn hidden" id="bb-btn" onclick="afterBlockBreak()">Continue &rarr;</button>
+</div>
+
+<!-- TASK BREAK (2 min) -->
+<div id="s-tbreak" class="screen">
+  <h2>Task Break</h2>
+  <div class="divider"></div>
+  <p>You have completed <strong id="tb-done"></strong>. Please rest for 2 minutes before the next task begins.</p>
+  <div class="tring">
+    <div class="tnum" id="tb-n">120</div>
+    <div class="tlbl">seconds</div>
+  </div>
+  <p id="tb-next" style="font-size:1.05rem;color:#888;"></p>
+  <button class="btn hidden" id="tb-btn" onclick="afterTaskBreak()">Continue &rarr;</button>
+</div>
+
+<!-- END -->
+<div id="s-end" class="screen">
+  <div class="end-icon">&#10003;</div>
+  <h2>Session Complete</h2>
+  <div class="divider"></div>
+  <p>Thank you for your participation. All three tasks have been completed successfully.</p>
+  <p style="font-size:1rem;color:#aaa;margin-top:1.5rem;">Please inform the researcher that you have finished.</p>
+</div>
+
+<!-- HOST PANEL — press Ctrl+Shift+D to reveal -->
+<div id="hp">
+  <div class="hp-t">&#128273; HOST PANEL</div>
+  <button class="hp-dl" onclick="dlCSV()">&#8595; Download CSV</button>
+  <button class="hp-x" onclick="q('hp').style.display='none'">&#10005;</button>
+</div>
+
+<script>
+let participantID = "";
+
+// Enable consent button
+document.addEventListener('change', e=>{
+  if(e.target.id === 'consentCheck'){
+    document.getElementById('consentBtn').disabled = !e.target.checked;
+  }
+});
+
+// Move to Participant ID screen
+function goToPID(){
+  show('s-pid');
+}
+
+// Enable PID button
+document.addEventListener('input', e=>{
+  if(e.target.id === 'pidInput'){
+    participantID = e.target.value.trim();
+    document.getElementById('pidBtn').disabled = participantID === "";
+  }
+});
+
+const PAGES=[];
+PAGES.push({id:'consent',type:'consent'});
+PAGES.push({id:'name',section:'Demographics',type:'text',q:'Name / Roll Number',key:'name'});
+PAGES.push({id:'sex',section:'Demographics',type:'radio',q:'Sex',opts:['Male','Female'],key:'sex'});
+PAGES.push({id:'age',section:'Demographics',type:'number',q:'Age',ph:'Enter your age (whole number)',key:'age'});
+PAGES.push({id:'edu',section:'Demographics',type:'radio',q:'Highest Educational Qualification',opts:['No formal schooling','Up to Class 5','Class 6–10','Class 11–12','Graduate','Postgraduate','Doctoral degree (PhD)'],key:'edu'});
+PAGES.push({id:'occ',section:'Demographics',type:'radio',q:'Current Occupational Status',opts:['Student','Homemaker','Self-employed or business','Private-sector employee','Government employee','Retired','Unemployed'],key:'occ'});
+PAGES.push({id:'loc',section:'Demographics',type:'radio',q:'Current Geographic Location',opts:['Rural','Urban'],key:'loc'});
+PAGES.push({id:'income',section:'Demographics',type:'radio',q:'Family Income',opts:['Lower than 3 lakhs per annum','3–6 lakhs per annum','6–12 lakhs per annum','12–18 lakhs per annum','Above 18 lakhs per annum'],key:'income'});
+PAGES.push({id:'screen',section:'Demographics',type:'number',q:'Average Screen Time (hours per day)',ph:'Enter a whole number',key:'screen'});
+PAGES.push({id:'health',section:'Demographics',type:'checkbox',q:'Have you experienced or been diagnosed with any of the following?',opts:['Attention difficulties (e.g., easily distracted, difficulty focusing)','Anxiety-related issues (e.g., frequent worry, panic, restlessness)','Depressive symptoms (e.g., low mood, lack of interest, fatigue)','Seizures or epilepsy','Any condition affecting memory, thinking, or concentration','Other (please specify)','I do not have any of the above'],hasOther:5,key:'health'});
+PAGES.push({id:'meds',section:'Demographics',type:'checkbox',q:'Are you currently taking any of the following types of medication?',opts:['Medication for anxiety or stress','Medication for depression','Sleep-related medication (sleeping pills, sedatives)','Medication for attention or focus','Strong pain medication affecting alertness','Other (please specify)','I am not taking any such medication'],hasOther:5,key:'meds'});
+PAGES.push({id:'motor',section:'Demographics',type:'checkbox',q:'Do you experience any of the following?',opts:['Hand tremors or shakiness','Injury or pain in hand/wrist affecting movement','Difficulty pressing keys quickly or accurately','Other (please specify)','I do not have any of the above'],hasOther:3,key:'motor'});
+PAGES.push({id:'color',section:'Demographics',type:'checkbox',q:'Do you have difficulty distinguishing any of the following colors?',opts:['Red and green','Blue and yellow','Difficulty distinguishing multiple colors','I do not have any color vision difficulties'],key:'color'});
+
+const BIS=['I act on impulse.','I act on the spur of the moment.','I do things without thinking.','I say things without thinking.','I buy things on impulse.','I plan for job security.','I plan for the future.','I save regularly.','I plan tasks carefully.','I am a careful thinker.','I am restless at lectures or talks.','I squirm at plays or lectures.','I concentrate easily.','I don\'t pay attention.','I am easily bored solving thought problems.'];
+const BIS_O=['Never / Rarely','Occasionally','Often','Almost Always'];
+BIS.forEach((q,i)=>PAGES.push({id:'bis'+i,section:'Barratt Impulsiveness Scale (BIS-15)',type:'scale4',q:'('+( i+1)+'/15)  '+q,opts:BIS_O,key:'bis'+i}));
+
+const MOD=['I act differently online than I do offline.','I act tougher on the internet than I do face-to-face.','I am less cautious about what I say online than about what I say in person.','I am more assertive online than I am offline.','I am more competitive online than I am offline.','I am more confident online than I am offline.','I am more outgoing online than I am offline.','I am more able to discuss controversial issues online than I am in person.','I find communicating with others easier on the internet than in person.','I make friends more easily online than I do offline.','I say things on the internet that I would not say in person.','My behaviours online are less restricted than in person.'];
+const MOD_O=['Not at all like me','Not like me','Neither','Somewhat like me','Very like me'];
+MOD.forEach((q,i)=>PAGES.push({id:'mod'+i,section:'Measure of Online Disinhibition (MOD)',type:'scale5',q:'('+( i+1)+'/12)  '+q,opts:MOD_O,key:'mod'+i}));
+
+PAGES.push({id:'done',type:'done'});
+
+let cur=0;
+const ans={};
+
+function pct(){return Math.max(Math.round((cur/(PAGES.length-1))*100),2);}
+
+function canNext(){
+  const p=PAGES[cur];
+  if(p.type==='consent') return !!ans.consent;
+  if(p.type==='text') return !!(ans[p.key]&&ans[p.key].trim());
+  if(p.type==='number') return ans[p.key]!==undefined&&ans[p.key]!=='';
+  if(p.type==='radio') return !!ans[p.key];
+  if(p.type==='checkbox') return !!(ans[p.key]&&ans[p.key].length);
+  if(p.type==='scale4'||p.type==='scale5') return !!ans[p.key];
+  return true;
+}
+
+function updateNav(){
+  const nb=document.getElementById('btn-next');
+  if(nb) nb.disabled=!canNext();
+}
+
+function render(){
+  const p=PAGES[cur];
+  document.getElementById('prog-fill').style.width=pct()+'%';
+  document.getElementById('prog-sec').textContent=p.section||(p.type==='consent'?'Informed Consent':'');
+  document.getElementById('prog-ct').textContent='Step '+(cur+1)+' of '+PAGES.length;
+
+  if(p.type==='consent'){renderConsent();return;}
+  if(p.type==='done'){renderDone();return;}
+
+  let h='';
+
+  h+='<div class="q-title">'+p.q+'</div>';
+
+  if(p.type==='text'){
+    h+='<input type="text" id="ai" placeholder="Enter here..." value="'+(ans[p.key]||'')+'" />';
+  } else if(p.type==='number'){
+    h+='<input type="number" id="ai" placeholder="'+(p.ph||'')+'" min="0" step="1" value="'+(ans[p.key]||'')+'" />';
+  } else if(p.type==='radio'){
+    h+='<div class="options">';
+    p.opts.forEach(o=>{const s=ans[p.key]===o?' selected':'';h+='<label class="opt'+s+'"><input type="radio" name="ropt" value="'+escHtml(o)+'" '+(ans[p.key]===o?'checked':'')+' />'+o+'</label>';});
+    h+='</div>';
+  } else if(p.type==='checkbox'){
+    h+='<div class="options" id="cbopts">';
+    p.opts.forEach((o,i)=>{
+      const vals=ans[p.key]||[];
+      const s=vals.includes(o)?' selected':'';
+      h+='<label class="opt'+s+'"><input type="checkbox" value="'+escHtml(o)+'" '+(vals.includes(o)?'checked':'')+' />'+o+'</label>';
+      if(p.hasOther!==undefined&&i===p.hasOther){
+        h+='<div class="other-wrap'+(vals.includes(o)?' show':'')+'" id="owrap"><input type="text" id="otext" placeholder="Please specify..." value="'+(ans[p.key+'_other']||'')+'" /></div>';
+      }
+    });
+    h+='</div>';
+  } else if(p.type==='scale4'||p.type==='scale5'){
+    h+='<div class="scale-row">';
+    p.opts.forEach((o,i)=>{const s=ans[p.key]===(i+1)?' sel':'';h+='<button class="scale-btn'+s+'" data-v="'+(i+1)+'">'+(i+1)+'</button>';});
+    h+='</div><div class="scale-labels"><span>'+p.opts[0]+'</span><span>'+p.opts[p.opts.length-1]+'</span></div>';
+  }
+
+  h+='<div class="nav">';
+  if(cur>0) h+='<button class="btn btn-back" id="btn-back">← Back</button>';
+  h+='<button class="btn btn-next" id="btn-next">Continue →</button>';
+  h+='</div>';
+
+  document.getElementById('page').innerHTML=h;
+  window.scrollTo(0,0);
+
+  if(p.type==='radio'){
+    document.querySelectorAll('input[type=radio]').forEach(r=>r.addEventListener('change',e=>{
+      ans[p.key]=e.target.value;
+      document.querySelectorAll('.opt').forEach(el=>el.classList.remove('selected'));
+      e.target.closest('.opt').classList.add('selected');
+      updateNav();
+    }));
+  }
+  if(p.type==='checkbox'){
+    const noneV=p.opts[p.opts.length-1];
+    document.querySelectorAll('#cbopts input[type=checkbox]').forEach(cb=>cb.addEventListener('change',e=>{
+      if(!ans[p.key]) ans[p.key]=[];
+      if(e.target.value===noneV&&e.target.checked){
+        ans[p.key]=[noneV];
+        document.querySelectorAll('#cbopts input[type=checkbox]').forEach(c=>{if(c!==e.target)c.checked=false;});
+      } else if(e.target.checked){
+        ans[p.key]=ans[p.key].filter(v=>v!==noneV);
+        const nc=document.querySelector('#cbopts input[value="'+noneV+'"]');
+        if(nc) nc.checked=false;
+        if(!ans[p.key].includes(e.target.value)) ans[p.key].push(e.target.value);
+      } else {
+        ans[p.key]=ans[p.key].filter(v=>v!==e.target.value);
+      }
+      document.querySelectorAll('#cbopts .opt').forEach(el=>{
+        const c=el.querySelector('input[type=checkbox]');
+        if(c) el.classList.toggle('selected',c.checked);
+      });
+      const ow=document.getElementById('owrap');
+      if(ow&&p.hasOther!==undefined){ow.classList.toggle('show',(ans[p.key]||[]).includes(p.opts[p.hasOther]));}
+      updateNav();
+    }));
+    const ot=document.getElementById('otext');
+    if(ot) ot.addEventListener('input',e=>{ans[p.key+'_other']=e.target.value;});
+  }
+  if(p.type==='scale4'||p.type==='scale5'){
+    document.querySelectorAll('.scale-btn').forEach(b=>b.addEventListener('click',e=>{
+      ans[p.key]=parseInt(e.currentTarget.dataset.v);
+      document.querySelectorAll('.scale-btn').forEach(sb=>sb.classList.remove('sel'));
+      e.currentTarget.classList.add('sel');
+      updateNav();
+    }));
+  }
+  if(p.type==='text'||p.type==='number'){
+    document.getElementById('ai').addEventListener('input',e=>{
+      if(p.type==='number'){
+        const v=parseFloat(e.target.value);
+        if(!isNaN(v)&&!Number.isInteger(v)){e.target.value=Math.round(v);ans[p.key]=String(Math.round(v));}
+        else ans[p.key]=e.target.value;
+      } else ans[p.key]=e.target.value;
+      updateNav();
+    });
+    document.getElementById('ai').addEventListener('keydown',e=>{if(e.key==='Enter'&&canNext()){cur++;render();}});
+  }
+
+  const bb=document.getElementById('btn-back');
+  if(bb) bb.addEventListener('click',()=>{cur--;render();});
+  document.getElementById('btn-next').addEventListener('click',()=>{if(canNext()){cur++;render();}});
+  updateNav();
+}
+
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
+
+function renderConsent(){
+  document.getElementById('page').innerHTML=`
+    <div class="consent-card"><h3>Purpose of the Study</h3><p>This study examines behavioral and psychological factors — including impulsivity, decision-making, and digital behavior. Findings will contribute to research in cyberpsychology, behavioral profiling, and human threat intelligence.</p></div>
+    <div class="consent-card"><h3>Procedures</h3><ul><li>Computer-based tasks (e.g., reaction-time tasks such as Go/No-Go)</li><li>Questionnaires related to behavior and decision-making</li><li>Basic demographic information</li></ul><p style="margin-top:8px;font-size:13px;color:#555"><strong style="color:#333">Duration:</strong> Approximately 40–55 minutes</p></div>
+    <div class="consent-card"><h3>Voluntary Participation &amp; Confidentiality</h3><p>Your participation is entirely voluntary. You may withdraw at any point without consequence. All data will be kept strictly confidential and used only in aggregate form for academic research — no personally identifiable information will be disclosed.</p></div>
+    <label class="agree-row ${ans.consent?'selected':''}" id="agrow"><input type="checkbox" id="agcb" ${ans.consent?'checked':''} /><span>Yes, I agree to participate in this study</span></label>
+    <div class="nav"><button class="btn btn-next" id="btn-next" ${ans.consent?'':'disabled'}>Continue →</button></div>`;
+  window.scrollTo(0,0);
+  document.getElementById('agcb').addEventListener('change',e=>{
+    ans.consent=e.target.checked;
+    document.getElementById('agrow').classList.toggle('selected',e.target.checked);
+    document.getElementById('btn-next').disabled=!e.target.checked;
+  });
+  document.getElementById('btn-next').addEventListener('click',()=>{if(ans.consent){cur++;render();}});
+}
+
+function renderDone(){
+  document.getElementById('page').innerHTML = `
+    <div class="done-wrap">
+      <h2>Survey Complete</h2>
+      <p>Click below to begin the task.</p>
+      <button class="btn" onclick="startTasks()">Start Task →</button>
+    </div>
+  `;
+}
+render();
+
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const CFG = {
+  gng:{id:'gng',name:'Go / No-Go Task',
+       pN:20,  blocks:3, bN:80,  goR:.70,
+       stimMs:1000, fixMs:500, fbMs:650, iLo:400, iHi:700},
+  sst:{id:'sst',name:'Stop-Signal Task',
+       pN:20,  blocks:4, bN:64,  goR:.75,
+       stimMs:1000, fixMs:500, fbMs:650, iLo:400, iHi:700,
+       ssdInit:250, ssdStep:50, ssdMin:100, ssdMax:500},
+  cpt:{id:'cpt',name:'Continuous Performance Task',
+       pN:15,  blocks:3, bN:80,  tgtR:.22,
+       letMs:250, respMs:1000, fbMs:450, fixMs:500},
+  bbSecs:60, tbSecs:120
+};
+/* ============================================================
+   STATE
+   ============================================================ */
+let S={
+  order:[], tidx:-1, tid:null,
+  phase:null, block:0, tridx:0,
+  trials:[], cseq:[], citgt:[],
+  data:[], timers:[],
+  t0:0, responded:false, awaiting:false,
+  ssd:250
+};
+
+/* ============================================================
+   UTILS
+   ============================================================ */
+const q=id=>document.getElementById(id);
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function rnd(lo,hi){return Math.floor(Math.random()*(hi-lo+1))+lo;}
+function after(ms,fn){const t=setTimeout(fn,ms);S.timers.push(t);return t;}
+function clearT(){S.timers.forEach(clearTimeout);S.timers=[];}
+function html(id,h){q(id).innerHTML=h;}
+function sc(h){html('trial-content',h);}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));q(id).classList.add('active');}
+
+/* ============================================================
+   TRIAL GENERATION
+   ============================================================ */
+function genGNG(n,r){const ng=Math.round(n*(1-r));return shuffle([...Array(n-ng).fill('go'),...Array(ng).fill('nogo')]);}
+function genSST(n,r){const st=Math.round(n*(1-r));return shuffle([...Array(n-st).fill('go'),...Array(st).fill('stop')]);}
+function genCPT(n,rate){
+  const ALL='ABCDEFGHIJLMNOPQRSTUVWXZ'.split('');
+  const SAFE=ALL.filter(l=>l!=='A'&&l!=='X');
+  const NON_X=ALL.filter(l=>l!=='X');
+  const numT=Math.round(n*rate);
+  const seq=new Array(n).fill(null), isTgt=new Array(n).fill(false);
+  let placed=0,tries=0;
+  while(placed<numT&&tries<30000){
+    tries++;
+    const p=1+Math.floor(Math.random()*(n-1));
+    if(!isTgt[p]&&!isTgt[p-1]&&(p+1>=n||!isTgt[p+1])&&seq[p]===null&&seq[p-1]===null){
+      seq[p]='X';seq[p-1]='A';isTgt[p]=true;placed++;
+    }
+  }
+  for(let i=0;i<n;i++){
+    if(seq[i]!==null)continue;
+    const prev=i>0?seq[i-1]:null;
+    if(prev==='A'){seq[i]=NON_X[Math.floor(Math.random()*NON_X.length)];}
+    else{
+      const r2=Math.random();
+      if(r2<.07)seq[i]='A';
+      else if(r2<.13)seq[i]='X';
+      else seq[i]=SAFE[Math.floor(Math.random()*SAFE.length)];
+    }
+  }
+  return{seq,isTgt};
+}
+
+/* ============================================================
+   SESSION INIT
+   ============================================================ */
+function initSession(){
+  S.order=shuffle(['gng','sst','cpt']);
+  S.tidx=-1; S.data=[];
+  nextTask();
+}
+function nextTask(){
+  S.tidx++;
+  if(S.tidx>=S.order.length){show('s-end');return;}
+  S.tid=S.order[S.tidx];
+  showIntro();
+}
+
+/* ============================================================
+   TASK INTRO
+   ============================================================ */
+function showIntro(){
+  const cfg=CFG[S.tid];
+  q('tbadge').textContent='Task '+(S.tidx+1)+' of 3';
+  q('t-title').textContent=cfg.name;
+  q('t-body').innerHTML=instrHTML(S.tid);
+  show('s-intro');
+}
+function instrHTML(id){
+  if(id==='gng') return`
+    <div class="ibox">
+      <div class="irow"><div class="bsm"></div>
+        <span><strong>Orange ball</strong> &rarr; Press <span class="kbd">SPACE</span> as fast as you can</span></div>
+      <div class="irow"><div class="bsm blue"></div>
+        <span><strong>Blue ball</strong> &rarr; Do <em>NOT</em> press &mdash; hold back!</span></div>
+    </div>
+    <div class="ibox" style="margin-top:.7rem;font-size:1.1rem;color:var(--muted);">
+      Most balls will be <strong>orange</strong>. Stay alert for the occasional <strong>blue</strong> ball and resist the urge to press.
+    </div>`;
+  if(id==='sst') return`
+    <div class="ibox">
+      <div class="irow"><div class="bsm"></div>
+        <span><strong>Orange ball</strong> &rarr; Press <span class="kbd">SPACE</span> as fast as you can</span></div>
+      <div class="irow">
+        <div style="position:relative;width:36px;height:36px;flex-shrink:0;">
+          <div class="bsm" style="width:24px;height:24px;position:absolute;top:6px;left:6px;"></div>
+          <div style="position:absolute;inset:0;border-radius:50%;border:5px solid var(--stop);"></div>
+        </div>
+        <span><strong>Blue ring appears</strong> &rarr; <em>STOP</em> &mdash; do not press!</span></div>
+    </div>
+    <div class="ibox" style="margin-top:.7rem;font-size:1.1rem;color:var(--muted);">
+      &#9888; Always respond quickly. The blue ring may appear <em>after</em> you have already started to react &mdash;
+      try to stop. It is perfectly okay if you cannot always stop in time.
+    </div>`;
+  if(id==='cpt') return`
+    <div class="ibox">
+      <div class="irow" style="font-size:1.1rem;">
+        Letters appear one at a time. Press <span class="kbd">SPACE</span> <strong>only</strong> when
+        you see &nbsp;<strong>X</strong>&nbsp; immediately after &nbsp;<strong>A</strong>.
+      </div>
+    </div>
+    <div class="ibox" style="margin-top:.7rem;">
+      <div class="irow">
+        <span style="font-size:1.6rem;font-weight:bold;min-width:90px;text-align:center;color:var(--ok);">A &rarr; X</span>
+        <span>&#10003; <strong>Press</strong> &mdash; X right after A</span></div>
+      <div class="irow">
+        <span style="font-size:1.6rem;font-weight:bold;min-width:90px;text-align:center;color:var(--err);">A &rarr; B</span>
+        <span>&#10007; <strong>Do not press</strong> &mdash; different letter after A</span></div>
+      <div class="irow">
+        <span style="font-size:1.6rem;font-weight:bold;min-width:90px;text-align:center;color:var(--err);">B &rarr; X</span>
+        <span>&#10007; <strong>Do not press</strong> &mdash; X not preceded by A</span></div>
+    </div>`;
+}
+
+/* ============================================================
+   LOAD TRIALS
+   ============================================================ */
+function loadTrials(n){
+  S.tridx=0;
+  const id=S.tid,cfg=CFG[id];
+  if(id==='gng') S.trials=genGNG(n,cfg.goR);
+  else if(id==='sst') S.trials=genSST(n,cfg.goR);
+  else{
+    const{seq,isTgt}=genCPT(n,cfg.tgtR);
+    S.cseq=seq; S.citgt=isTgt;
+    S.trials=isTgt.map(t=>t?'target':'nontarget');
+  }
+}
+
+/* ============================================================
+   PRACTICE & MAIN START
+   ============================================================ */
+function startPractice(){
+  const cfg=CFG[S.tid];
+  S.phase='practice'; S.block=0;
+  if(S.tid==='sst') S.ssd=cfg.ssdInit;
+  loadTrials(cfg.pN);
+  show('s-trial'); updateHdr(); runTrial();
+}
+function startMain(){
+  S.phase='main'; S.block=1;
+  loadTrials(CFG[S.tid].bN);
+  show('s-trial'); updateHdr(); runTrial();
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+function updateHdr(){
+  const cfg=CFG[S.tid];
+  q('th-l').textContent=S.phase==='practice'?'Practice':'Block '+S.block+' / '+cfg.blocks;
+  q('th-m').textContent=cfg.name;
+  q('th-r').textContent='Trial '+S.tridx+' / '+S.trials.length;
+}
+
+/* ============================================================
+   TRIAL RUNNER
+   ============================================================ */
+function runTrial(){
+  clearT(); S.responded=false; S.awaiting=false;
+  updateHdr();
+  if(S.tid==='gng') runGNG();
+  else if(S.tid==='sst') runSST();
+  else runCPT();
+}
+
+/* ============================================================
+   GO / NO-GO
+   ============================================================ */
+function runGNG(){
+  const c=CFG.gng, iti=rnd(c.iLo,c.iHi);
+  sc('');
+  after(iti,()=>{
+    sc('<div class="fix">+</div>');
+    after(c.fixMs,()=>{
+      const t=S.trials[S.tridx], bc=t==='go'?'go':'nogo';
+      sc('<div class="sball '+bc+'" id="sb"></div>');
+      S.t0=performance.now(); S.awaiting=true;
+      after(c.stimMs,()=>{
+        if(S.responded)return;
+        S.awaiting=false;
+        rec({type:t,pressed:0,rt:'',ssd:'',outcome:t==='go'?'omission':'correct_rejection'});
+        if(t==='go') fb('error','Miss!','Press for the orange ball',adv);
+        else fb('correct','&#10003; Correct!','Good — you held back',adv);
+      });
+    });
+  });
+}
+function spGNG(){
+  const rt=Math.round(performance.now()-S.t0);
+  const t=S.trials[S.tridx];
+  const el=q('sb'); if(el)el.classList.add('pressed');
+  rec({type:t,pressed:1,rt,ssd:'',outcome:t==='go'?'hit':'false_alarm'});
+  if(t==='go') fb('correct','&#10003; Correct!','Good response',adv);
+  else fb('error','Oops!','Do not press for the blue ball',adv);
+}
+
+/* ============================================================
+   STOP-SIGNAL TASK
+   ============================================================ */
+function runSST(){
+  const c=CFG.sst, iti=rnd(c.iLo,c.iHi);
+  sc('');
+  after(iti,()=>{
+    sc('<div class="fix">+</div>');
+    after(c.fixMs,()=>{
+      const t=S.trials[S.tridx];
+      sc('<div class="sw"><div class="sball go" id="sb"></div><div class="sring" id="sr"></div></div>');
+      S.t0=performance.now(); S.awaiting=true;
+      if(t==='stop'){
+        after(S.ssd,()=>{
+          if(!S.responded){const r=q('sr');if(r)r.classList.add('on');}
+        });
+      }
+      after(c.stimMs,()=>{
+        if(S.responded)return;
+        S.awaiting=false;
+        if(t==='go'){
+          rec({type:'go',pressed:0,rt:'',ssd:'',outcome:'omission'});
+          fb('warn','Miss!','Please press for the orange ball',adv);
+        } else {
+          const ps=S.ssd;
+          S.ssd=Math.min(S.ssd+CFG.sst.ssdStep,CFG.sst.ssdMax);
+          rec({type:'stop',pressed:0,rt:'',ssd:ps,outcome:'successful_stop'});
+          fb('correct','&#10003; Stopped!','Good inhibitory control',adv);
+        }
+      });
+    });
+  });
+}
+function spSST(){
+  const rt=Math.round(performance.now()-S.t0);
+  const t=S.trials[S.tridx];
+  const el=q('sb'); if(el)el.classList.add('pressed');
+  if(t==='go'){
+    rec({type:'go',pressed:1,rt,ssd:'',outcome:'hit'});
+    fb('correct','&#10003; Correct!','Good response',adv);
+  } else {
+    const ps=S.ssd;
+    S.ssd=Math.max(S.ssd-CFG.sst.ssdStep,CFG.sst.ssdMin);
+    rec({type:'stop',pressed:1,rt,ssd:ps,outcome:'failed_stop'});
+    fb('warn','Could not stop','That is okay — keep trying',adv);
+  }
+}
+
+/* ============================================================
+   CONTINUOUS PERFORMANCE TASK
+   ============================================================ */
+function runCPT(){
+  if(S.tridx===0){
+    sc('<div class="fix">+</div>');
+    after(CFG.cpt.fixMs,showLetter);
+  } else {
+    showLetter();
+  }
+}
+function showLetter(){
+  const c=CFG.cpt, letter=S.cseq[S.tridx];
+  sc('<div class="clet" id="cl">'+letter+'</div>');
+  S.t0=performance.now(); S.awaiting=true;
+  after(c.letMs,()=>{const el=q('cl');if(el)el.style.opacity='0';});
+  after(c.letMs+c.respMs,()=>{
+    if(S.responded)return;
+    S.awaiting=false;
+    const t=S.trials[S.tridx];
+    if(t==='target'){
+      rec({type:'target',pressed:0,rt:'',ssd:'',outcome:'miss'});
+      fb('error','Miss!','Press when X follows A',adv);
+    } else {
+      rec({type:'nontarget',pressed:0,rt:'',ssd:'',outcome:'correct_rejection'});
+      if(S.phase==='practice') fb('correct','&#10003;','Correct — no press needed',adv);
+      else adv();
+    }
+  });
+}
+function spCPT(){
+  const rt=Math.round(performance.now()-S.t0);
+  const t=S.trials[S.tridx];
+  if(t==='target'){
+    rec({type:'target',pressed:1,rt,ssd:'',outcome:'hit'});
+    fb('correct','&#10003; Correct!','A followed by X',adv);
+  } else {
+    rec({type:'nontarget',pressed:1,rt,ssd:'',outcome:'false_alarm'});
+    fb('error','Oops!','Only press when X follows A',adv);
+  }
+}
+
+/* ============================================================
+   FEEDBACK
+   ============================================================ */
+function fb(cls,msg,sub,done){
+  const ms=S.tid==='cpt'?CFG.cpt.fbMs:CFG[S.tid].fbMs;
+  sc('<div class="fbt fb-'+cls+'">'+msg+'</div><div class="fbs">'+sub+'</div>');
+  after(ms,done);
+}
+
+/* ============================================================
+   RECORD
+   ============================================================ */
+function rec(d){
+  S.data.push({
+    participant_id: participantID, // ✅ added
+    task:S.tid,
+    task_order:S.tidx+1,
+    phase:S.phase,
+    block:S.phase==='practice'?0:S.block,
+    trial:S.tridx+1,
+    ...d,
+    timestamp:new Date().toISOString()
+  });
+}
+/* ============================================================
+   ADVANCE TRIAL
+   ============================================================ */
+function adv(){
+  S.tridx++;
+  const cfg=CFG[S.tid];
+  if(S.tridx>=S.trials.length){
+    sc('');
+    after(250,()=>{
+      if(S.phase==='practice'){
+        q('pend-msg').textContent=
+          'Now the main task begins: '+cfg.blocks+' blocks of '+cfg.bN+' trials each, with 1-minute breaks between blocks.';
+        show('s-pend');
+      } else {
+        if(S.block<cfg.blocks) showBBreak();
+        else taskDone();
+      }
+    });
+    return;
+  }
+  runTrial();
+}
+
+/* ============================================================
+   BLOCK BREAK — 1 MIN
+   ============================================================ */
+let bbIv=null;
+function showBBreak(){
+  q('bb-done').textContent=S.block;
+  q('bb-total').textContent=CFG[S.tid].blocks;
+  q('bb-btn').classList.add('hidden');
+  show('s-bbreak');
+  let rem=CFG.bbSecs;
+  q('bb-n').textContent=rem;
+  clearInterval(bbIv);
+  bbIv=setInterval(()=>{
+    rem--;
+    q('bb-n').textContent=rem;
+    if(rem<=15)q('bb-btn').classList.remove('hidden');
+    if(rem<=0){clearInterval(bbIv);afterBlockBreak();}
+  },1000);
+}
+function afterBlockBreak(){
+  clearInterval(bbIv);
+  S.block++;
+  loadTrials(CFG[S.tid].bN);
+  show('s-trial'); updateHdr(); runTrial();
+}
+
+/* ============================================================
+   TASK BREAK — 2 MIN
+   ============================================================ */
+let tbIv=null;
+function taskDone(){
+  const isLast=S.tidx>=S.order.length-1;
+  if(isLast){show('s-end');return;}
+  q('tb-done').textContent=CFG[S.tid].name;
+  const nxt=CFG[S.order[S.tidx+1]].name;
+  q('tb-next').textContent='Up next: '+nxt;
+  q('tb-btn').classList.add('hidden');
+  show('s-tbreak');
+  let rem=CFG.tbSecs;
+  q('tb-n').textContent=rem;
+  clearInterval(tbIv);
+  tbIv=setInterval(()=>{
+    rem--;
+    q('tb-n').textContent=rem;
+    if(rem<=30)q('tb-btn').classList.remove('hidden');
+    if(rem<=0){clearInterval(tbIv);afterTaskBreak();}
+  },1000);
+}
+function afterTaskBreak(){
+  clearInterval(tbIv);
+  nextTask();
+}
+
+/* ============================================================
+   HOST PANEL + CSV DOWNLOAD
+   ============================================================ */
+function toggleHP(){
+  const p=q('hp');
+  p.style.display=(p.style.display==='none'||p.style.display==='')?'block':'none';
+}
+function dlCSV(){
+  if(!S.data.length){alert('No data recorded yet.');return;}
+  const COLS=['task','task_order','phase','block','trial','type','pressed','rt','ssd','outcome','timestamp'];
+  const rows=[COLS.join(','),...S.data.map(r=>COLS.map(k=>r[k]??'').join(','))];
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
+  a.download='cognitive_battery_'+new Date().toISOString().replace(/[:.]/g,'-')+'.csv';
+  a.click();
+}
+
+/* ============================================================
+   KEYBOARD
+   ============================================================ */
+document.addEventListener('keydown',e=>{
+  // Host panel: Ctrl + Shift + D
+  if(e.ctrlKey&&e.shiftKey&&e.key==='D'){e.preventDefault();toggleHP();return;}
+
+  if(e.code==='Space'){
+    e.preventDefault();
+    if(!S.awaiting||S.responded)return;
+    S.responded=true; S.awaiting=false;
+    if(S.tid==='gng') spGNG();
+    else if(S.tid==='sst') spSST();
+    else spCPT();
+  }
+});
+
+// Enable PID button
+document.addEventListener('input', e=>{
+  if(e.target.id === 'pidInput'){
+    participantID = e.target.value.trim();
+    document.getElementById('pidBtn').disabled = participantID === "";
+  }
+});
+
+// Start survey
+function startSurvey(){
+  show('s-survey');   // switches screen
+  cur = 0;            // reset survey
+  render();           // start survey
+}
+
+// After survey → start tasks
+function startTasks(){
+  show('s-welcome');
+}
+show('s-pid');
+</script>
+</body>
+</html>
